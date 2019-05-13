@@ -7,8 +7,8 @@ from torch.autograd import Variable
 import torchvision.models as models
 from .Model import Model
 
-mean = Variable(torch.FloatTensor([0.485, 0.456, 0.406]), requires_grad=False).cuda()
-std = Variable(torch.FloatTensor([0.229, 0.224, 0.225]), requires_grad=False).cuda()
+#mean = Variable(torch.FloatTensor([0.485, 0.456, 0.406]), requires_grad=False)#.cuda()
+#std = Variable(torch.FloatTensor([0.229, 0.224, 0.225]), requires_grad=False)#.cuda()
 
 def flip(x, dim):
     xsize = x.size()
@@ -21,7 +21,7 @@ def flip(x, dim):
 
 class SVCNN(Model):
 
-    def __init__(self, name, nclasses=40, pretraining=True, cnn_name='vgg11'):
+    def __init__(self, name, nclasses=40, pretraining=True, cnn_name='vgg11', no_cuda=False):
         super(SVCNN, self).__init__(name)
 
         self.classnames=['airplane','bathtub','bed','bench','bookshelf','bottle','bowl','car','chair',
@@ -34,8 +34,11 @@ class SVCNN(Model):
         self.pretraining = pretraining
         self.cnn_name = cnn_name
         self.use_resnet = cnn_name.startswith('resnet')
-        self.mean = Variable(torch.FloatTensor([0.485, 0.456, 0.406]), requires_grad=False).cuda()
-        self.std = Variable(torch.FloatTensor([0.229, 0.224, 0.225]), requires_grad=False).cuda()
+        self.mean = Variable(torch.FloatTensor([0.485, 0.456, 0.406]), requires_grad=False)
+        self.std = Variable(torch.FloatTensor([0.229, 0.224, 0.225]), requires_grad=False)
+        if not no_cuda:
+            self.mean = self.mean.cuda()
+            self.std = self.std.cuda()
 
         if self.use_resnet:
             if self.cnn_name == 'resnet18':
@@ -70,7 +73,7 @@ class SVCNN(Model):
 
 class MVCNN(Model):
 
-    def __init__(self, name, model, nclasses=40, cnn_name='vgg11', num_views=12):
+    def __init__(self, name, model, nclasses=40, cnn_name='vgg11', num_views=12, no_cuda=False):
         super(MVCNN, self).__init__(name)
 
         self.classnames=['airplane','bathtub','bed','bench','bookshelf','bottle','bowl','car','chair',
@@ -81,9 +84,11 @@ class MVCNN(Model):
 
         self.nclasses = nclasses
         self.num_views = num_views
-        self.mean = Variable(torch.FloatTensor([0.485, 0.456, 0.406]), requires_grad=False).cuda()
-        self.std = Variable(torch.FloatTensor([0.229, 0.224, 0.225]), requires_grad=False).cuda()
-
+        self.mean = Variable(torch.FloatTensor([0.485, 0.456, 0.406]), requires_grad=False)
+        self.std = Variable(torch.FloatTensor([0.229, 0.224, 0.225]), requires_grad=False)
+        if not no_cuda:
+            self.mean = self.mean.cuda()
+            self.std = self.std.cuda()
         self.use_resnet = cnn_name.startswith('resnet')
 
         if self.use_resnet:

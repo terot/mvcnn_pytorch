@@ -11,7 +11,7 @@ import time
 class ModelNetTrainer(object):
 
     def __init__(self, model, train_loader, val_loader, optimizer, loss_fn, \
-                 model_name, log_dir, num_views=12):
+                 model_name, log_dir, num_views=12, n_classes=40, no_cuda=False):
 
         self.optimizer = optimizer
         self.model = model
@@ -21,8 +21,14 @@ class ModelNetTrainer(object):
         self.model_name = model_name
         self.log_dir = log_dir
         self.num_views = num_views
+        self.n_classes = n_classes
+        self.no_cuda = no_cuda
 
-        self.model.cuda()
+        if self.no_cuda:
+            self.model
+        else:
+            self.model.cuda()
+
         if self.log_dir is not None:
             self.writer = SummaryWriter(log_dir)
 
@@ -51,10 +57,17 @@ class ModelNetTrainer(object):
 
                 if self.model_name == 'mvcnn':
                     N,V,C,H,W = data[1].size()
-                    in_data = Variable(data[1]).view(-1,C,H,W).cuda()
+                    in_data = Variable(data[1]).view(-1,C,H,W)
+                    if not self.no_cuda:
+                        in_data = in_data.cuda()
                 else:
-                    in_data = Variable(data[1].cuda())
-                target = Variable(data[0]).cuda().long()
+                    in_data = Variable(data[1])
+                    if not self.no_cuda:
+                        in_data = in_data.cuda()
+                target = Variable(data[0])
+                if not self.no_cuda:
+                    target = target.cuda()
+                target = target.long()
 
                 self.optimizer.zero_grad()
 
@@ -109,8 +122,8 @@ class ModelNetTrainer(object):
         # out_data = None
         # target = None
 
-        wrong_class = np.zeros(40)
-        samples_class = np.zeros(40)
+        wrong_class = np.zeros(self.n_classes)
+        samples_class = np.zeros(self.n_classes)
         all_loss = 0
 
         self.model.eval()
@@ -126,11 +139,17 @@ class ModelNetTrainer(object):
 
             if self.model_name == 'mvcnn':
                 N,V,C,H,W = data[1].size()
-                in_data = Variable(data[1]).view(-1,C,H,W).cuda()
+                in_data = Variable(data[1]).view(-1,C,H,W)
+                if not self.no_cuda:
+                    in_data = in_data.cuda()
             else:#'svcnn'
-                in_data = Variable(data[1]).cuda()
-            target = Variable(data[0]).cuda()
-
+                in_data = Variable(data[1])
+                if not self.no_cuda:
+                    in_data = in_data.cuda()
+            target = Variable(data[0])
+            if not self.no_cuda:
+                target = target.cuda()
+                
             out_data = self.model(in_data)
             pred = torch.max(out_data, 1)[1]
             all_loss += self.loss_fn(out_data, target).cpu().data.numpy()
