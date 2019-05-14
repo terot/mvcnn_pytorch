@@ -54,7 +54,6 @@ class ModelNetTrainer(object):
             out_data = None
             in_data = None
             for i, data in enumerate(self.train_loader):
-
                 if self.model_name == 'mvcnn':
                     N,V,C,H,W = data[1].size()
                     in_data = Variable(data[1]).view(-1,C,H,W)
@@ -125,6 +124,7 @@ class ModelNetTrainer(object):
         wrong_class = np.zeros(self.n_classes)
         samples_class = np.zeros(self.n_classes)
         all_loss = 0
+        confusion = np.zeros((self.n_classes, self.n_classes))
 
         self.model.eval()
 
@@ -136,7 +136,6 @@ class ModelNetTrainer(object):
         all_pred = []
 
         for _, data in enumerate(self.val_loader, 0):
-
             if self.model_name == 'mvcnn':
                 N,V,C,H,W = data[1].size()
                 in_data = Variable(data[1]).view(-1,C,H,W)
@@ -164,6 +163,14 @@ class ModelNetTrainer(object):
             all_correct_points += correct_points
             all_points += results.size()[0]
 
+            # confusion matrix
+            pred_local = pred.cpu().data.numpy().astype('int')
+            target_local = target.cpu().data.numpy().astype('int')
+            for i in range(results.size()[0]):
+                pred_i = pred_local[i]
+                target_i = target_local[i]
+                confusion[pred_i][target_i] += 1
+
         print ('Total # of test models: ', all_points)
         val_mean_class_acc = np.mean((samples_class-wrong_class)/samples_class)
         acc = all_correct_points.float() / all_points
@@ -173,6 +180,11 @@ class ModelNetTrainer(object):
         print ('val mean class acc. : ', val_mean_class_acc)
         print ('val overall acc. : ', val_overall_acc)
         print ('val loss : ', loss)
+
+        confusion /= np.sum(confusion)
+        with np.printoptions(precision=3, suppress=True):
+            print("confusion:")
+            print(confusion)
 
         self.model.train()
 
