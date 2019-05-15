@@ -25,7 +25,7 @@ parser.add_argument("-n_epochs", type=int, help="number of epochs", default=30)
 parser.add_argument("-classnames", type=str, help="class names", default=None)
 parser.add_argument("-no_cuda", dest='no_cuda', action='store_true')
 parser.add_argument("-init_from", type=str, help="init with pretrained model", default=None)
-
+parser.add_argument("-max_batches", type=int, help="number of epochs", default=None)
 parser.set_defaults(train=False)
 
 def create_folder(log_dir):
@@ -38,12 +38,16 @@ def create_folder(log_dir):
         os.mkdir(log_dir)
 
 def train_stage1(args):
-    log_dir = args.name+'_stage_1'
+    if args.init_from is None:
+        log_dir = args.name+'_stage_1'
+    else:
+        log_dir = None
     pretraining = not args.no_pretraining
     classnames = args.classnames.split(',')
     n_models_train = args.num_models*args.num_views
 
-    create_folder(log_dir)
+    if log_dir is not None:
+        create_folder(log_dir)
     cnet = SVCNN(args.name, nclasses=args.n_classes, pretraining=pretraining,
                  cnn_name=args.cnn_name, no_cuda=args.no_cuda)
 
@@ -64,16 +68,20 @@ def train_stage1(args):
     print('num_train_files: '+str(len(train_dataset.filepaths)))
     print('num_val_files: '+str(len(val_dataset.filepaths)))
     trainer = ModelNetTrainer(cnet, train_loader, val_loader, optimizer, nn.CrossEntropyLoss(), 'svcnn', log_dir, num_views=1, n_classes=args.n_classes, no_cuda=args.no_cuda)
-    trainer.train(args.n_epochs)
+    trainer.train(args.n_epochs, args.max_batches)
 
     return cnet
 
 def train_stage2(cnet, args):
-    log_dir = args.name+'_stage_2'
+    if args.init_from is None:
+        log_dir = args.name+'_stage_2'
+    else:
+        log_dir = None
     classnames = args.classnames.split(',')
     n_models_train = args.num_models*args.num_views
 
-    create_folder(log_dir)
+    if log_dir is not None:
+        create_folder(log_dir)
     if args.init_from is None:
         cnet_2 = MVCNN(args.name, cnet, nclasses=args.n_classes, cnn_name=args.cnn_name,
                        num_views=args.num_views, no_cuda=args.no_cuda)
@@ -98,7 +106,7 @@ def train_stage2(cnet, args):
     trainer = ModelNetTrainer(cnet_2, train_loader, val_loader, optimizer, nn.CrossEntropyLoss(),
                               'mvcnn', log_dir, num_views=args.num_views, n_classes=args.n_classes,
                               no_cuda=args.no_cuda)
-    trainer.train(args.n_epochs)
+    trainer.train(args.n_epochs, args.max_batches)
 
 if __name__ == '__main__':
     args = parser.parse_args()
